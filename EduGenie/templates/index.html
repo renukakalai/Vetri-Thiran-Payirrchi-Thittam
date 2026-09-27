@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EduGenie — AI Learning Assistant</title>
+    <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Welcome to EduGenie 🧠✨</h1>
+            <p>Your personal AI tutor for learning support!</p>
+        </header>
+
+        <!-- Q&A -->
+        <section class="card">
+            <form id="qaForm">
+                <label><strong>Ask EduGenie a Question:</strong></label><br /><br />
+                <input type="text" id="question" placeholder="Why is the sky blue?" required />
+                <button type="submit">Get Answer</button>
+            </form>
+            <div id="qaResult" class="output"></div>
+        </section>
+
+        <!-- Explanation -->
+        <section class="card">
+            <form id="explainForm">
+                <label><strong>Need an Explanation?</strong></label><br /><br />
+                <input type="text" id="topic" placeholder="Photosynthesis" required />
+                <button type="submit">Explain</button>
+            </form>
+            <div id="explanationResult" class="output"></div>
+        </section>
+
+        <!-- Summary -->
+        <section class="card">
+            <form id="summaryForm">
+                <label><strong>Summarize a Paragraph:</strong></label><br /><br />
+                <textarea id="summaryText" rows="5" placeholder="Paste long content to summarize" required></textarea>
+                <button type="submit">Summarize</button>
+            </form>
+            <div id="summaryResult" class="output"></div>
+        </section>
+
+        <!-- Quiz -->
+        <section class="card">
+            <form id="quizForm">
+                <label><strong>Generate a Quiz:</strong></label><br /><br />
+                <textarea id="quizText" rows="5" placeholder="Paste a passage (e.g., about the Solar System)" required></textarea>
+                <button type="submit">Generate Quiz</button>
+            </form>
+            <div id="quizResult" class="output"></div>
+        </section>
+
+        <!-- Learning Path -->
+        <section class="card">
+            <form id="learnForm">
+                <label><strong>Get Learning Recommendations:</strong></label><br /><br />
+                <input type="text" id="learnTopic" placeholder="SQL" required />
+                <button type="submit">Get Recommendations</button>
+            </form>
+            <div id="learnResult" class="output"></div>
+        </section>
+    </div>
+
+    <script>
+        // -------- Q&A --------
+        document.getElementById("qaForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const q = document.getElementById("question").value.trim();
+            const out = document.getElementById("qaResult");
+            out.textContent = "⏳ Thinking...";
+            try {
+                const res = await fetch(`/qa?question=${encodeURIComponent(q)}`);
+                const data = await res.json();
+                out.innerHTML = `<strong>Answer:</strong><br/>${data.answer}`;
+            } catch (err) {
+                out.textContent = "❌ Error: " + err.message;
+            }
+        });
+
+        // -------- Explanation --------
+        document.getElementById("explainForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const topic = document.getElementById("topic").value.trim();
+            const out = document.getElementById("explanationResult");
+            out.textContent = "⏳ Explaining...";
+            try {
+                const res = await fetch("/explain", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ topic }),
+                });
+                const data = await res.json();
+                out.innerHTML = `<strong>Explanation:</strong><br/>${data.explanation || data.error}`;
+            } catch (err) {
+                out.textContent = "❌ Error: " + err.message;
+            }
+        });
+
+        // -------- Summary --------
+        document.getElementById("summaryForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const text = document.getElementById("summaryText").value.trim();
+            const out = document.getElementById("summaryResult");
+            out.textContent = "⏳ Summarizing...";
+            try {
+                const res = await fetch("/summarize", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ text }),
+                });
+                const data = await res.json();
+                out.innerHTML = `<strong>Summary:</strong><br/>${data.summary || data.error}`;
+            } catch (err) {
+                out.textContent = "❌ Error: " + err.message;
+            }
+        });
+
+        // -------- Quiz --------
+        document.getElementById("quizForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const text = document.getElementById("quizText").value.trim();
+            const out = document.getElementById("quizResult");
+            out.textContent = "⏳ Generating quiz...";
+            try {
+                const res = await fetch("/quiz", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ text }),
+                });
+                const data = await res.json();
+                const quiz = data.quiz;
+                if (!Array.isArray(quiz)) {
+                    out.textContent = "❌ Invalid quiz format.";
+                    return;
+                }
+                if (quiz[0] && quiz[0].error) {
+                    out.textContent = "❌ " + quiz[0].error;
+                    return;
+                }
+                let html = "<strong>Quiz:</strong>";
+                quiz.forEach((q, i) => {
+                    html += `<div class="quiz-item"><p><strong>Q${i + 1}:</strong> ${q.question}</p><ul>`;
+                    q.options.forEach((opt) => {
+                        html += `<li>${opt}</li>`;
+                    });
+                    html += `</ul><p><em>Answer: ${q.answer}</em></p></div>`;
+                });
+                out.innerHTML = html;
+            } catch (err) {
+                out.textContent = "❌ Error: " + err.message;
+            }
+        });
+
+        // -------- Learning Path --------
+        document.getElementById("learnForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const topic = document.getElementById("learnTopic").value.trim();
+            const out = document.getElementById("learnResult");
+            out.textContent = "⏳ Building your path...";
+            try {
+                const res = await fetch(`/learn/recommendations?topic=${encodeURIComponent(topic)}`);
+                const data = await res.json();
+                out.innerHTML = `<strong>Learning Recommendations for "${data.topic}":</strong><pre>${data.recommendation}</pre>`;
+            } catch (err) {
+                out.textContent = "❌ Error: " + err.message;
+            }
+        });
+    </script>
+</body>
+</html>
